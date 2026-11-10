@@ -178,8 +178,19 @@ __forceinline__ __device__ float3 integrator(PerRayData& prd)
     //  }
     //}
 
-    // Note that the primary rays and volume scattering miss cases do not offset the ray t_min by sysData.sceneEpsilon.
-    optixTrace(theLaunchParameters.handle,
+    // // Note that the primary rays and volume scattering miss cases do not offset the ray t_min by sysData.sceneEpsilon.
+    // optixTrace(theLaunchParameters.handle,
+    //            prd.pos, prd.wi, // origin, direction
+    //            epsilon, prd.distance, 0.0f, // tmin, tmax, time
+    //            OptixVisibilityMask(0xFF), 
+    //            // GLTF default is backface culling enabled, but the GAS OptixGeometryFlags disable
+    //            // culling depending on the material doubleSided condition.
+    //            OPTIX_RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 
+    //            TYPE_RAY_RADIANCE, NUM_RAY_TYPES, TYPE_RAY_RADIANCE,
+    //            payload.x, payload.y);
+
+    //Basic SER implementation
+    optixTraverse(theLaunchParameters.handle,
                prd.pos, prd.wi, // origin, direction
                epsilon, prd.distance, 0.0f, // tmin, tmax, time
                OptixVisibilityMask(0xFF), 
@@ -188,6 +199,9 @@ __forceinline__ __device__ float3 integrator(PerRayData& prd)
                OPTIX_RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 
                TYPE_RAY_RADIANCE, NUM_RAY_TYPES, TYPE_RAY_RADIANCE,
                payload.x, payload.y);
+
+    optixReorder();
+    optixInvoke(payload.x, payload.y);
 
     // Path termination by miss shader or sample() routines.
     if ((prd.typeEvent == BSDF_EVENT_ABSORB) || isNull(prd.throughput))
