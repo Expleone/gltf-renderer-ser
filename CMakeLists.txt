@@ -40,6 +40,9 @@ endif()
 # Set to true to speedup kernel compilation during debugging.
 set(DEBUG_ARCH FALSE)
 
+
+set(CMAKE_VS_GLOBALS "VcpkgEnabled=false")
+
 # Do NOT run the C:\Program Files\CMake\share\cmake-<version>\Modules\CMakeTestCUDACompiler.cmake test
 # which fails when using older CUDA Toolkits which are incompatible with the current MSVS 2022 17.10.x MSC 19.40 version. 
 # NVCC checks the MSC version compatibility inside its host_config.h and requires the --allow-unsupported-compiler 
@@ -143,7 +146,7 @@ endif()
 # GLTF_renderer_core folder will automatically appear in the same destination.
 # Mind that the GLTF_renderer executable also expects the sheen_lut.hdr file next to the executable.
 
-set(LOCAL_3RDPARTY "${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty")
+set(LOCAL_3RDPARTY "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty")
 message(STATUS "LOCAL_3RDPARTY = " "${LOCAL_3RDPARTY}")
 
 list(APPEND CMAKE_MODULE_PATH "${LOCAL_3RDPARTY}/CMake")
@@ -204,7 +207,8 @@ endif()
 find_package(OpenGL REQUIRED)
 find_package(GLFW REQUIRED)
 find_package(GLEW REQUIRED)
-find_package(FastGLTF REQUIRED)
+# find_package(FastGLTF REQUIRED)
+add_subdirectory(3rdparty/fastgltf)
 find_package(STB REQUIRED)
 find_package(GLM REQUIRED)
 find_package(DevIL_1_8_0 REQUIRED)
@@ -461,7 +465,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   ${CUDAToolkit_INCLUDE_DIRS}
   ${GLEW_INCLUDE_DIRS}
   ${GLFW_INCLUDE_DIR}
-  ${FASTGLTF_INCLUDE_DIR}
+  # ${FASTGLTF_INCLUDE_DIR}
   ${STB_INCLUDE_DIR}
   ${GLM_INCLUDE_DIR}
   ${IL_INCLUDE_DIR}
@@ -476,9 +480,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   CUDA::cudart      # CUDA runtime link library. DLL ships with the CUDA toolkit.
   CUDA::cuda_driver # CUDA driver  link library. DLL ships with the display driver.
   OpenGL::GL
+  fastgltf::fastgltf
   ${GLEW_LIBRARIES}
   ${GLFW_LIBRARIES}
-  ${FASTGLTF_LIBRARY}
+  # ${FASTGLTF_LIBRARY}
   ${IL_LIBRARIES}
   ${ILU_LIBRARIES}
   ${ILUT_LIBRARIES}
@@ -502,6 +507,19 @@ set_property(TARGET ${OPTIX_LIB}    PROPERTY FOLDER "application")
 # this will copy only the changed OptiX module files into the desired folder next to the executable.
 
 install(FILES $<TARGET_OBJECTS:${OPTIX_LIB}> DESTINATION "$<TARGET_FILE_DIR:${PROJECT_NAME}>/${PROJECT_NAME}_core")
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${PROJECT_NAME}>/${PROJECT_NAME}_core"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_OBJECTS:${OPTIX_LIB}> "$<TARGET_FILE_DIR:${PROJECT_NAME}>/${PROJECT_NAME}_core"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/data/sheen_lut.hdr" "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          "${LOCAL_3RDPARTY}/devil_1_8_0/lib/x64/Release/DevIL.dll"
+          "${LOCAL_3RDPARTY}/devil_1_8_0/lib/x64/Release/ILU.dll"
+          "${LOCAL_3RDPARTY}/devil_1_8_0/lib/x64/Release/ILUT.dll"
+          "${LOCAL_3RDPARTY}/glew/bin/Release/x64/glew32.dll"
+          "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+  COMMAND_EXPAND_LISTS
+)
 
 # Print CUDA info
 
