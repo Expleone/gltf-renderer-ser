@@ -220,6 +220,13 @@ public:
     SAMPLES_PER_SECOND  // samples / second, pure raytracing performance
   };
 
+  enum SERMode : int{
+    SER_OFF,
+    MINIMAL,
+    RUSSIAN_ROULETTE,
+    SORT_AFTER_SHADING
+  };
+
   Application(GLFWwindow* window, Options const& options);
   ~Application();
 
@@ -406,6 +413,7 @@ private:
   int m_launches = 1; // The number of asynchronous launches per render() call. Can be set with command line option --launches (-l) <int>
 
   BenchmarkMode m_benchmarkMode = BenchmarkMode::OFF;
+  SERMode m_SERMode = SERMode::SER_OFF;
 
   int m_benchmarkEntries = 0;   // The current number of valid benchmark results inside the vector.
   int m_benchmarkCell    = 0;   // The next cell inside the m_benchmarkValues vector to be written to.

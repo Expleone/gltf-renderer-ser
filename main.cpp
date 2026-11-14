@@ -110,7 +110,7 @@ int runApp(Options const& options)
       g_app->update();
     }
     g_app->guiNewFrame();
-    //g_app->guiReferenceManual(); // The ImGui "Programming Manual" as example code.
+    // g_app->guiReferenceManual(); // The ImGui "Programming Manual" as example code.
     g_app->guiWindow();
     g_app->guiEventHandler(); // SPACE to toggle the GUI windows and all mouse tracking via GuiState.
     g_app->display();         // OpenGL display always required to lay the background for the GUI.

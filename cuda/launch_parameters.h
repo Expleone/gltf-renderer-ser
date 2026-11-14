@@ -62,6 +62,7 @@ struct LaunchParameters
   //unsigned int width;
   //unsigned int height;
 
+  unsigned int SERMode; // 0 == off, 1 == minimal, 2 == russian roulette
   unsigned int iteration;    // Sub-frame iteration index.
   float        sceneEpsilon; // Scene-dependent epsilon value on ray tmin to avoid self-intersections.
   int          numLights;    // Number of entries inside the lightDefinitions array.

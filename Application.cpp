@@ -1627,6 +1627,26 @@ void Application::guiWindow()
       "  Ctrl+LMB = Pick material index from object under mouse cursor.\n\n"
       "Please read the 'GLTF_renderer.exe --help' output and the doc/README.md for more information.\n");
   }
+
+  if (ImGui::CollapsingHeader("SER settings"))
+  { 
+    if(ImGui::RadioButton("off", (int*) & m_SERMode, SER_OFF)){
+      m_launchParameters.SERMode = 0;
+    }
+    ImGui::SameLine();
+    if(ImGui::RadioButton("minimal", (int*) & m_SERMode, MINIMAL)){
+      m_launchParameters.SERMode = 1;
+    }
+    ImGui::SameLine();
+    if(ImGui::RadioButton("dp before shading", (int*) & m_SERMode, RUSSIAN_ROULETTE)){
+      m_launchParameters.SERMode = 2;
+    }
+    ImGui::SameLine();
+    if(ImGui::RadioButton("dp after shading", (int*) & m_SERMode, SORT_AFTER_SHADING)){
+      m_launchParameters.SERMode = 3;
+    }
+  }
+
   if (ImGui::CollapsingHeader("System"))
   { 
     ImGui::RadioButton("off", (int*) & m_benchmarkMode, OFF);

@@ -179,18 +179,8 @@ __forceinline__ __device__ float3 integrator(PerRayData& prd)
     //}
 
     // // Note that the primary rays and volume scattering miss cases do not offset the ray t_min by sysData.sceneEpsilon.
-    // optixTrace(theLaunchParameters.handle,
-    //            prd.pos, prd.wi, // origin, direction
-    //            epsilon, prd.distance, 0.0f, // tmin, tmax, time
-    //            OptixVisibilityMask(0xFF), 
-    //            // GLTF default is backface culling enabled, but the GAS OptixGeometryFlags disable
-    //            // culling depending on the material doubleSided condition.
-    //            OPTIX_RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 
-    //            TYPE_RAY_RADIANCE, NUM_RAY_TYPES, TYPE_RAY_RADIANCE,
-    //            payload.x, payload.y);
-
-    //Basic SER implementation
-    optixTraverse(theLaunchParameters.handle,
+    if(theLaunchParameters.SERMode == 0)
+    optixTrace(theLaunchParameters.handle,
                prd.pos, prd.wi, // origin, direction
                epsilon, prd.distance, 0.0f, // tmin, tmax, time
                OptixVisibilityMask(0xFF), 
@@ -200,9 +190,29 @@ __forceinline__ __device__ float3 integrator(PerRayData& prd)
                TYPE_RAY_RADIANCE, NUM_RAY_TYPES, TYPE_RAY_RADIANCE,
                payload.x, payload.y);
 
-    optixReorder();
-    optixInvoke(payload.x, payload.y);
+    //Basic SER implementation
+    else{
+      optixTraverse(theLaunchParameters.handle,
+                prd.pos, prd.wi, // origin, direction
+                epsilon, prd.distance, 0.0f, // tmin, tmax, time
+                OptixVisibilityMask(0xFF), 
+                // GLTF default is backface culling enabled, but the GAS OptixGeometryFlags disable
+                // culling depending on the material doubleSided condition.
+                OPTIX_RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 
+                TYPE_RAY_RADIANCE, NUM_RAY_TYPES, TYPE_RAY_RADIANCE,
+                payload.x, payload.y);
 
+      if(theLaunchParameters.SERMode == 1) optixReorder();
+      if(theLaunchParameters.SERMode == 2) {
+        int deadPath = depth == theLaunchParameters.pathLengths.y - 1 || 
+                       optixHitObjectIsMiss();
+        optixReorder(deadPath, 1);
+      }
+      optixInvoke(payload.x, payload.y);
+    }
+    
+
+    int terminatePath = 0;
     // Path termination by miss shader or sample() routines.
     if ((prd.typeEvent == BSDF_EVENT_ABSORB) || isNull(prd.throughput))
     {
@@ -212,16 +222,20 @@ __forceinline__ __device__ float3 integrator(PerRayData& prd)
       {
         prd.radiance = make_float3(0.0f);             // return black instead of the miss program result.
       }
+      terminatePath = 1;
       break; // Path termination.
+      
     } 
 
     // Unbiased Russian Roulette path termination.
-    if (theLaunchParameters.pathLengths.x <= depth) // Start termination after a minimum number of bounces.
+    if (theLaunchParameters.pathLengths.x <= depth && !terminatePath) // Start termination after a minimum number of bounces.
     {
       const float probability = fmaxf(prd.throughput);
 
       if (probability < rng(prd.seed)) // Paths with lower probability to continue are terminated earlier.
       {
+        
+        terminatePath = 1;
         break; // Path termination.
       }
 
@@ -234,7 +248,9 @@ __forceinline__ __device__ float3 integrator(PerRayData& prd)
     //  // Random walk through scattering volume, sampling the direction according to the phase function.
     //  sampleVolumeScattering(rng2(prd.seed), prd.stack[prd.idxStack].scattering_bias.w, prd.wi);
     //}
-
+    if(theLaunchParameters.SERMode == 3) optixReorder(terminatePath, 1);
+    // if(terminatePath) break;
+    
     ++depth; // Next path segment.
   }
   return prd.radiance;
